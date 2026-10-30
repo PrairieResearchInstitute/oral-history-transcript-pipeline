@@ -1,0 +1,29 @@
+# Example interview metadata. Copy it next to the video as <video name>.yml.
+title: "Oral History Interview: Bill Shilts"
+date: 2026-10-XX            # leave as is until the date is confirmed; shows as written
+language: en
+speakers:                   # interviewee first; then interviewers, lead interviewer first
+  - name: Bill Shilts
+    role: interviewee
+    affiliation: "Former Chief, ISGS; first Executive Director, PRI"
+  - name: Emily Benton
+    role: interviewer
+    affiliation: University Library
+  - name: Felipe Menanteau
+    role: interviewer
+    affiliation: Prairie Research Institute
+
+glossary:                   # optional; goes into the Whisper prompt and the review notes
+  - Shilts
+  - Dick Berg
+  - Mahomet Aquifer
+  - Manteno
+  - ISGS
+  - DePauw
+
+corrections:                # optional; applied to the transcript and subtitles, never to raw Whisper output
+  "Mantino": "Manteno"
+  "Muhammad Aquifer": "Mahomet Aquifer"
+
+# After checking the review notes, if diarization named two people the wrong way round:
+# speaker_map: {0: Emily Benton, 2: Felipe Menanteau}

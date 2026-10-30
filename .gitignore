@@ -1,0 +1,20 @@
+# Media, models and pipeline outputs never go in git.
+*.MP4
+*.mp4
+*.MOV
+*.mov
+*.m4a
+*.wav
+!tests/sample.wav
+*.flac
+*.bin
+*.onnx
+*.srt
+*.vtt
+outputs/
+tests/out/
+__pycache__/
+.pytest_cache/
+.DS_Store
+.env
+*token*

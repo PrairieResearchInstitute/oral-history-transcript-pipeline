@@ -1,0 +1,39 @@
+# PRI-wide names and terms, merged with each interview's own `glossary`.
+# They go into the review notes (so every occurrence can be checked) and the per-interview
+# terms go into the Whisper prompt. Add past directors and other names as interviews come in.
+# This file is public: names and terms only, nothing from an interview.
+
+institutions:
+  - Prairie Research Institute
+  - PRI
+  - Illinois State Geological Survey
+  - ISGS
+  - Illinois State Water Survey
+  - ISWS
+  - Illinois Natural History Survey
+  - INHS
+  - Illinois State Archaeological Survey
+  - ISAS
+  - Illinois Sustainable Technology Center
+  - ISTC
+  - Illinois Department of Natural Resources
+  - IDNR
+  - University of Illinois
+  - U of I
+  - Urbana-Champaign
+  - University Library
+
+places:
+  - Champaign
+  - Urbana
+  - Springfield
+  - Mahomet Aquifer
+  - Mahomet
+
+people: []
+  # Past survey chiefs and PRI directors, spelled as they should appear.
+
+# Mishearings seen in more than one interview. Per-interview `corrections` override these.
+corrections:
+  "Muhammad Aquifer": "Mahomet Aquifer"
+  "UOI": "U of I"

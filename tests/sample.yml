@@ -1,0 +1,10 @@
+# tests/sample.wav is 11 seconds of John F. Kennedy's 1961 inaugural address
+# (a US government work, public domain), taken from whisper.cpp's samples/jfk.wav.
+title: "Test: JFK inaugural address excerpt"
+date: 1961-01-20
+language: en
+speakers:
+  - name: John F. Kennedy
+    role: interviewee
+glossary:
+  - Americans

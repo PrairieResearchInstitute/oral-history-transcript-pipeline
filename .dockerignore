@@ -1,0 +1,8 @@
+# Send only the build files to the Docker daemon. Never the videos.
+*
+!Dockerfile
+!checksums.txt
+!requirements.txt
+!glossary.yml
+!pipeline/
+pipeline/__pycache__

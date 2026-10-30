@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""Transcribe one oral history video. Everything runs in a local Docker container with no network.
+
+    ./transcribe --input ~/Oral-History/Laura-Keefer/623A1622.MP4 [--meta FILE.yml]
+                 [--model large-v3-turbo] [--threads 6] [--force] [--redo STAGES]
+                 [--stop-after STAGE] [--speakers auto|manual] [--no-build]
+
+Outputs go to a folder named after the video, next to it (for example Laura-Keefer/623A1622/).
+If --meta is not given, the script looks for <video name>.yml, then interview.yml, in the
+video's folder.
+
+Needs only Docker and the python3 that comes with macOS (3.8 or newer, standard library only).
+"""
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+
+REPO = os.path.dirname(os.path.realpath(__file__))
+STAGES = ["validate", "extract", "transcribe", "check", "speakers", "render"]
+
+
+def die(msg):
+    sys.exit(f"transcribe: {msg}")
+
+
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(
+        prog="transcribe",
+        description="Transcribe an oral history video in a local Docker container.")
+    ap.add_argument("--input", required=True, help="video or audio file")
+    ap.add_argument("--meta", help="interview YAML (default: <video name>.yml or interview.yml next to the video)")
+    ap.add_argument("--model", default="large-v3-turbo", help="Whisper model; each model is its own image")
+    ap.add_argument("--threads", type=int, default=6, help="CPU threads for Whisper and diarization (default 6)")
+    ap.add_argument("--force", action="store_true", help="rerun every stage (raw Whisper output is kept)")
+    ap.add_argument("--redo", metavar="STAGES",
+                    help="comma-separated stages to rerun, e.g. render or speakers,render")
+    ap.add_argument("--stop-after", choices=STAGES[:-1], help="stop after this stage")
+    ap.add_argument("--speakers", choices=["auto", "manual"], default="auto",
+                    help="manual skips diarization; every turn reads SPEAKER ?")
+    ap.add_argument("--no-build", action="store_true", help="use the existing image without the build check")
+    a = ap.parse_args(argv)
+    if a.redo:
+        bad = [s for s in a.redo.split(",") if s.strip() and s.strip() not in STAGES]
+        if bad:
+            ap.error(f"unknown stage(s) in --redo: {', '.join(bad)} (stages: {', '.join(STAGES)})")
+    if a.threads < 1:
+        ap.error("--threads must be at least 1")
+    return a
+
+
+def find_meta(video, meta):
+    if meta:
+        meta = os.path.abspath(os.path.expanduser(meta))
+        if not os.path.isfile(meta):
+            die(f"metadata file not found: {meta}")
+        return meta
+    folder = os.path.dirname(video)
+    stem = os.path.splitext(os.path.basename(video))[0]
+    for name in (f"{stem}.yml", "interview.yml"):
+        p = os.path.join(folder, name)
+        if os.path.isfile(p):
+            return p
+    die(f"no --meta given and no {stem}.yml or interview.yml next to the video")
+
+
+def check_docker():
+    if not shutil.which("docker"):
+        die("docker is not installed or not on PATH")
+    if subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+        die("Docker is not running (start Docker Desktop)")
+
+
+def image_exists(image):
+    return subprocess.run(["docker", "image", "inspect", image],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def build(image, model):
+    cmd = ["docker", "build", "--build-arg", f"MODEL={model}", "-t", image, REPO]
+    if image_exists(image):
+        # Already built: a quick cache check that picks up code changes.
+        r = subprocess.run(cmd[:2] + ["-q"] + cmd[2:], stdout=subprocess.DEVNULL)
+    else:
+        print(f"Building {image} (first time: compiles whisper.cpp and downloads the models, "
+              f"about 10 minutes)", flush=True)
+        r = subprocess.run(cmd)
+    if r.returncode != 0:
+        die(f"docker build failed (exit {r.returncode}); see README.md, Troubleshooting")
+
+
+def run_command(a, video, meta, image):
+    cmd = ["docker", "run", "--rm",
+           "--network", "none",                       # the container cannot send anything anywhere
+           "--user", f"{os.getuid()}:{os.getgid()}",  # outputs are owned by you
+           "-v", f"{os.path.dirname(video)}:/data",
+           "-v", f"{meta}:/meta/meta.yml:ro"]
+    if sys.stdout.isatty():
+        cmd.append("-t")
+    cmd += [image,
+            "--input", f"/data/{os.path.basename(video)}",
+            "--meta", "/meta/meta.yml",
+            "--threads", str(a.threads),
+            "--speakers", a.speakers]
+    if a.force:
+        cmd.append("--force")
+    if a.redo:
+        cmd += ["--redo", a.redo]
+    if a.stop_after:
+        cmd += ["--stop-after", a.stop_after]
+    return cmd
+
+
+def main(argv=None):
+    a = parse_args(argv)
+    video = os.path.abspath(os.path.expanduser(a.input))
+    if not os.path.isfile(video):
+        die(f"input not found: {video}")
+    meta = find_meta(video, a.meta)
+    check_docker()
+    image = f"oral-history-transcript:{a.model}"
+    if not a.no_build:
+        build(image, a.model)
+    elif not image_exists(image):
+        die(f"--no-build given but {image} does not exist")
+    cmd = run_command(a, video, meta, image)
+    # Replace this process with docker, so Ctrl-C goes straight to the container.
+    os.execvp(cmd[0], cmd)
+
+
+if __name__ == "__main__":
+    main()
